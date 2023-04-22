@@ -1,0 +1,185 @@
+proc import file = 'C:\Users\my397\Downloads\diabetes.csv'
+     out= work.Diabetes
+	 dbms=csv;
+run;
+
+proc print data= work.diabetes (obs = 20) noobs;
+run;
+
+proc means data= work.diabetes (obs = 20);
+Var BMI;
+run;
+
+proc freq data= work.diabetes (obs = 20);
+    table Glucose BMI;
+run;
+
+proc univariate data= work.diabetes normal plot;
+var BMI;
+ID Glucose;
+run;
+
+
+proc means N mean std t prt;
+title 'one sample t-test';
+var BMI Glucose ;
+run;
+
+data diabetes;
+set diabetes;
+if BMI <= 18.5 then mark = 'Underweight'; 
+if 18.5 <= BMI <24.9 then mark ='Normal';
+if 24.9 <= BMI < 29.9 then mark = 'Overweight';
+if 29.9 <= BMI < 34.9 then mark = 'Obese';
+if BMI > = 35 then mark = 'Extremely Obese';
+
+if Glucose <= 80 then comment = 'Low';
+if 80 <= Glucose < 100 then comment = 'Normal';
+if 100 <= Glucose < 130 then comment = 'High';
+if 130 <= Glucose < 150 then comment = 'Extremely High';
+if Glucose > = 150 then comment = 'Dangerous';
+
+run;
+
+
+proc print data = diabetes;
+run;
+
+proc freq data =  diabetes;
+table mark*comment;
+run;
+
+proc corr data =  diabetes (obs = 20);
+var Glucose;
+with BMI;
+run;
+
+proc print data= diabetes;
+run;
+
+proc gchart data =  diabetes;
+vbar mark;
+Title  'Bar Chart of marks from diabetes';
+run;
+
+proc gchart data = diabetes;
+vbar comment;
+Title 'Bar chart of comments from diabetes';
+run;
+
+proc univariate data =  diabetes;
+var BMI Glucose;
+histogram / normal ;
+title 'Histogram of marks from diabetes';
+run;
+
+proc freq data = diabetes;
+tables mark comment / out= pct_row; 
+title 'Frequency table';
+run;
+
+proc tabulate data =  diabetes;
+class mark comment;
+var BMI Glucose;
+table comment*mark, BMI Glucose;
+run;
+
+data diabetes;
+set diabetes;
+group = 1;
+run;
+
+ods graphics off;
+title 'Box plot for BMI';
+axis1 label = none value = none major = none;
+proc boxplot data =  diabetes; 
+plot BMI*group / haxis=axis1 boxwidth= 10;
+run;
+ods graphics;
+
+ods graphics off;
+title 'Box plot for Glucose';
+axis1 label = none value = none major = none;
+
+proc boxplot data =  diabetes;
+plot Glucose*group / haxis = axis1 boxwidth = 10;
+run;
+
+ods graphics;
+
+proc plot data =  diabetes; 
+plot BMI * Glucose; 
+title 'Scatter plot';
+run;
+
+proc sgscatter data =  diabetes;
+plot BMI * Glucose 
+/ group  = mark ;
+title 'BMI vs. Glucose';
+run;
+
+proc print data =  diabetes;
+run;
+
+proc freq data =  diabetes;
+tables mark*comment / chisq expected deviation norow nocol nopercent; 
+title1 'Frequency table hw#4';
+run; 
+
+proc tabulate data =  diabetes;
+class mark comment;
+var BMI Glucose;
+table comment*mark, BMI Glucose;
+run;
+
+/* H0:"[BMI] is dependent of [Glucose]" */
+/* H1:"[BMI] is independent of [Glucose]" */
+/* p-value is 0.25. Since 0.25 is much larger than 0.05 it fails to reject null*/
+/*There is not sufficient evidence to say that there is a statistically significant difference between the means of BMI and Glucose. */
+
+proc glm data =  diabetes;
+class BMI Glucose;
+model Glucose = BMI;
+means BMI;
+run;
+
+proc anova data =  diabetes;
+class BMI Glucose;
+model Glucose = BMI;
+means BMI;
+run;
+
+/* H0: mu1 = mu2 */
+/* H1: “At least one of the mean is different from the others” */
+/*p-value is 0.5118 > 0.05, it fails to reject null hypothesis */
+/*There is not sufficient evidence to say that there is a statistically significant difference between the means of BMI and Glucose. */
+
+proc ttest data = diabetes alpha= 0.05;
+paired BMI*Glucose;
+run;
+
+/* H0: mu1 = mu2 (the paired population means are equal) */
+/* H1: mu1 is not equal to mu2 (the paired population means are not equal )*/
+/*Since the p-value is very small (p< 0.0001) and it’s less than 0.05 which means we reject null */
+/*There is enough evidence to conclude that the mean difference between the paired observations is statistically significant. */ 
+
+proc corr data =  diabetes plots=scatter(nvar = all);
+var BMI Glucose;
+run;
+
+/* H0: ro = 0 (The population correlation coefficient is not significantly differently from 0) */
+/*H1: ro not equal to 0 (The population correlation coefficient is significantly different from 0)*/
+
+/*The p-value is 0.517. Since the p value is 0.517 which is larger than 0.05. We fail to reject the null. */
+/* There is insufficient evidence to conclude that there is a significant linear relationship between BMI and Glucose because the correlation coefficient is NOT significantly different from zero.*/
+
+proc reg data =  diabetes
+outest= work.param_estimates;
+model BMI = Glucose;
+run;
+
+ods output ParameterEstimates = work.param_estimates;
+proc glm data = diabetes;
+model BMI = Glucose;
+run;
+
